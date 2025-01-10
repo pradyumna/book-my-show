@@ -1,0 +1,141 @@
+
+buildscript {
+    ext {
+        springBootVersion = '3.3.3'
+    }
+    repositories {
+        mavenCentral()
+        maven { url "https://repo.spring.io/snapshot" }
+        maven { url "https://repo.spring.io/milestone" }
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
+        classpath("com.gorylenko.gradle-git-properties:gradle-git-properties:2.4.1")
+        classpath "io.spring.gradle:dependency-management-plugin:0.5.2.RELEASE"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'maven-publish'
+apply plugin: 'maven-publish-auth'
+//apply plugin: 'com.gorylenko.gradle-git-properties'
+
+
+repositories {
+    mavenCentral()
+    maven { url "https://repo.spring.io/snapshot" }
+    maven { url "https://repo.spring.io/milestone" }
+    maven { url "https://plugins.gradle.org/m2/" }
+}
+
+configurations {
+    providedRuntime
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+sourceCompatibility = '21'
+
+ext {
+    mapstructVersion = '1.5.5.Final'
+    lombokVersion = '1.18.30'
+    lombokMapstructBinding = '0.2.0'
+}
+
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // Spring Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    //dev-tools
+    runtimeOnly 'org.springframework.boot:spring-boot-devtools'
+
+    //Database
+    runtimeOnly 'com.h2database:h2'
+
+    // MapStruct
+    implementation "org.mapstruct:mapstruct:${mapstructVersion}"
+    annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+
+    //For lombok annotation processor
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+    // Lombok MapStruct Binding
+    annotationProcessor "org.projectlombok:lombok-mapstruct-binding:${lombokMapstructBinding}"
+
+    // Hibernate Types - for additional data types
+    implementation 'com.vladmihalcea:hibernate-types-60:2.21.1'
+
+    // Jackson for JSON processing
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // Utils
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+    implementation 'org.apache.commons:commons-collections4:4.4'
+
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'com.h2database:h2'
+
+    // For audit logging
+    implementation 'org.springframework.data:spring-data-envers'
+
+    //For monitoring
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+}
+
+bootRun {
+    systemProperties System.properties
+}
+
+sourceSets {
+    integrationTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/it/java')
+        }
+        resources.srcDir file('src/it/resources')
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+bootJar {
+    enabled = true
+}
+
+tasks.register('version', VersionTask)
+
+class VersionTask extends DefaultTask {
+    @TaskAction
+    def version() {
+        println project.version
+    }
+}
+
+// Configure annotation processors order
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs = [
+            '-Amapstruct.suppressGeneratorTimestamp=true',
+            '-Amapstruct.suppressGeneratorVersionInfoComment=true',
+            '-Amapstruct.defaultComponentModel=spring'
+    ]
+}
+
+jar {
+    enabled = false
+}
